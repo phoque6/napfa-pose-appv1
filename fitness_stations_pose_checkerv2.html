@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fitness Stations Pose Checker + Teacher Dashboard (Flexed Arm Hang / Incline Pull-Up)</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b1020; color: #e9eeff; }
+    header { padding: 14px 14px 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    header h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .2px; }
+    header .sub { margin-top: 6px; font-size: 12px; opacity: .86; line-height: 1.35; }
+
+    .row { display: grid; grid-template-columns: 380px 1fr; gap: 12px; padding: 12px; align-items:start; }
+    @media (max-width: 1040px) { .row { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    label { display: block; font-size: 12px; opacity: .9; margin: 0 0 6px 0; }
+    input[type="text"], select, button {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.25);
+      color: #e9eeff;
+      outline: none;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button { cursor: pointer; font-weight: 750; }
+    button:active { transform: translateY(1px); }
+    .btnRow { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px; }
+    .btnRow3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top:10px; }
+
+    .toggle { display:flex; align-items:center; gap:10px; margin-top:10px; }
+    .toggle input { transform: scale(1.15); }
+    .hr { height: 1px; background: rgba(255,255,255,.10); margin: 10px 0; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric { padding: 10px; border-radius: 12px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.10); }
+    .metric .k { font-size: 12px; opacity: .85; }
+    .metric .v { font-size: 18px; font-weight: 900; margin-top: 2px; }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      line-height: 1.35;
+      font-size: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .ok { background: rgba(0,255,140,.16); border: 1px solid rgba(0,255,140,.35); color: #9cffd0; }
+    .bad { background: rgba(255,70,70,.18); border: 1px solid rgba(255,70,70,.35); color: #ffd0d0; }
+    .warn { background: rgba(255,200,0,.18); border: 1px solid rgba(255,200,0,.35); color: #ffe7a3; }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: .9;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .small { font-size: 11px; opacity: .86; }
+
+    .canvasWrap { position: relative; }
+    canvas { width: 100%; height: auto; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); background: #070b16; }
+    video { display:none; }
+
+    table { width:100%; border-collapse: collapse; }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      padding: 8px 6px;
+      font-size: 12px;
+      text-align:left;
+      vertical-align: top;
+    }
+    th { opacity:.9; font-size: 12px; }
+    .muted { opacity:.75; }
+    .pill {
+      display:inline-block; padding:2px 8px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.18);
+      font-weight:800; font-size:11px;
+    }
+    .pillOk { border-color: rgba(0,255,140,.35); background: rgba(0,255,140,.12); color:#9cffd0; }
+    .pillBad { border-color: rgba(255,70,70,.35); background: rgba(255,70,70,.14); color:#ffd0d0; }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Fitness Stations Pose Checker + Teacher Dashboard</h1>
+  <div class="sub">
+    Push-ups replaced with <b>Flexed Arm Hang</b> + added <b>Incline Pull-Up</b> station.
+    Includes student name, per-station reps/hold time, correctness %, dashboard + CSV export.<br/>
+    <span class="muted">Camera note: iPad/iPhone Safari usually blocks camera on <b>file://</b>. Host on HTTPS (e.g., GitHub Pages/Netlify) for iPad use.</span>
+  </div>
+</header>
+
+<div class="row">
+  <div class="panel">
+    <label for="studentName">Student name</label>
+    <input id="studentName" type="text" placeholder="e.g., 6RS • Aditi" />
+
+    <div class="hr"></div>
+
+    <label for="station">Station to monitor</label>
+    <select id="station">
+      <option value="flexarmhang">1) Flexed Arm Hang</option>
+      <option value="inclinepullup">2) Incline Pull-Up (body row)</option>
+      <option value="situp">3) Sit-Ups</option>
+      <option value="sitreach">4) Sit-and-Reach</option>
+      <option value="broadjump">5) Standing Broad Jump</option>
+      <option value="shuttlerun">6) Shuttle Run (basic)</option>
+    </select>
+
+    <div class="grid2" style="margin-top:10px;">
+      <div class="metric">
+        <div class="k">Live posture</div>
+        <div class="v" id="postureText">—</div>
+      </div>
+      <div class="metric">
+        <div class="k" id="repLabel">Live reps</div>
+        <div class="v" id="repText">0</div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px;">
+      <div class="metric">
+        <div class="k">Correctness % (this station)</div>
+        <div class="v" id="pctText">0%</div>
+      </div>
+      <div class="metric">
+        <div class="k">Frames sampled</div>
+        <div class="v" id="frameText">0</div>
+      </div>
+    </div>
+
+    <div class="toggle">
+      <input type="checkbox" id="mirror" checked />
+      <label for="mirror" style="margin:0">Mirror view (selfie)</label>
+    </div>
+    <div class="toggle">
+      <input type="checkbox" id="showSkeleton" checked />
+      <label for="showSkeleton" style="margin:0">Show skeleton overlay</label>
+    </div>
+    <div class="toggle">
+      <input type="checkbox" id="strict" />
+      <label for="strict" style="margin:0">Strict mode</label>
+    </div>
+
+    <div class="btnRow">
+      <button id="startBtn">Start Camera</button>
+      <button id="stopBtn">Stop Camera</button>
+    </div>
+
+    <div class="btnRow3">
+      <button id="resetStationBtn">Reset Station Stats</button>
+      <button id="resetAllBtn">Reset All Stats</button>
+      <button id="saveRecordBtn">Save to Dashboard</button>
+    </div>
+
+    <div class="status" id="statusBox">
+      <span class="badge warn">READY</span>
+      Click <b>Start Camera</b>, select a station, and move into frame.
+    </div>
+
+    <div class="hint" id="hintBox"></div>
+
+    <div class="hint small">
+      <b>Correctness %:</b> % of frames classified as <b>Correct</b> (form monitoring, not official scoring).
+    </div>
+  </div>
+
+  <div class="panel canvasWrap">
+    <video id="video" playsinline></video>
+    <canvas id="canvas" width="1280" height="720"></canvas>
+
+    <div class="hr"></div>
+
+    <div class="panel" style="padding:12px; margin-top:10px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div style="font-weight:900;">Teacher Dashboard</div>
+        <div style="display:flex; gap:10px;">
+          <button id="exportCsvBtn" style="width:auto; padding:8px 10px;">Export CSV</button>
+          <button id="clearDashboardBtn" style="width:auto; padding:8px 10px;">Clear</button>
+        </div>
+      </div>
+
+      <div class="hint small" style="margin-top:10px;">
+        Tip: Monitor one student → click <b>Save to Dashboard</b>. Repeat for next student. Export when done.
+      </div>
+
+      <div style="overflow:auto; margin-top:10px; max-height: 320px;">
+        <table id="dashTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Student</th>
+              <th>Station</th>
+              <th>Reps/Time</th>
+              <th>Correct %</th>
+              <th>Frames</th>
+              <th>Last status</th>
+            </tr>
+          </thead>
+          <tbody id="dashBody">
+            <tr><td colspan="7" class="muted">No saved records yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MediaPipe Pose (CDN) -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<script>
+  // ===========================
+  // Utilities
+  // ===========================
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+    }[c]));
+  }
+
+  // Angle at point B formed by A-B-C, in degrees
+  function angleABC(A, B, C) {
+    const ab = { x: A.x - B.x, y: A.y - B.y };
+    const cb = { x: C.x - B.x, y: C.y - B.y };
+    const dot = (ab.x * cb.x + ab.y * cb.y);
+    const magAB = Math.hypot(ab.x, ab.y);
+    const magCB = Math.hypot(cb.x, cb.y);
+    const denom = (magAB * magCB) || 1e-6;
+    const cos = clamp(dot / denom, -1, 1);
+    return Math.acos(cos) * (180 / Math.PI);
+  }
+
+  // Resolve MediaPipe globals (robust across CDN builds)
+  const PoseCtor = (typeof Pose === "function") ? Pose : (Pose && Pose.Pose ? Pose.Pose : null);
+  const POSE_CONNECTIONS_RESOLVED = (typeof POSE_CONNECTIONS !== "undefined")
+    ? POSE_CONNECTIONS
+    : (Pose && Pose.POSE_CONNECTIONS ? Pose.POSE_CONNECTIONS : null);
+
+  // MediaPipe Pose landmark indexes
+  const LM = {
+    NOSE: 0,
+    L_SHOULDER: 11, R_SHOULDER: 12,
+    L_ELBOW: 13,    R_ELBOW: 14,
+    L_WRIST: 15,    R_WRIST: 16,
+    L_HIP: 23,      R_HIP: 24,
+    L_KNEE: 25,     R_KNEE: 26,
+    L_ANKLE: 27,    R_ANKLE: 28,
+  };
+
+  function visOK(lm, min=0.55) { return lm && (lm.visibility === undefined || lm.visibility >= min); }
+
+  function pickSide(landmarks) {
+    const leftScore =
+      (landmarks[LM.L_SHOULDER]?.visibility||0) +
+      (landmarks[LM.L_ELBOW]?.visibility||0) +
+      (landmarks[LM.L_WRIST]?.visibility||0) +
+      (landmarks[LM.L_HIP]?.visibility||0) +
+      (landmarks[LM.L_KNEE]?.visibility||0) +
+      (landmarks[LM.L_ANKLE]?.visibility||0);
+    const rightScore =
+      (landmarks[LM.R_SHOULDER]?.visibility||0) +
+      (landmarks[LM.R_ELBOW]?.visibility||0) +
+      (landmarks[LM.R_WRIST]?.visibility||0) +
+      (landmarks[LM.R_HIP]?.visibility||0) +
+      (landmarks[LM.R_KNEE]?.visibility||0) +
+      (landmarks[LM.R_ANKLE]?.visibility||0);
+    return (rightScore >= leftScore) ? "R" : "L";
+  }
+
+  function getPt(landmarks, side, part) {
+    const idx = LM[(side==="R" ? "R_" : "L_") + part];
+    return landmarks[idx];
+  }
+
+  // ===========================
+  // Station rules + hints
+  // ===========================
+  function strictOn() { return document.getElementById("strict").checked; }
+
+  function stationHints(station) {
+    switch (station) {
+      case "flexarmhang":
+        return `<b>Flexed Arm Hang setup</b><br/>
+• Best with camera facing the student (front) or slight angle.<br/>
+• Ensure shoulders, elbows, wrists, and nose/chin area are visible.<br/>
+<b>Checks:</b> elbows flexed + (approx) chin above hands/shoulders; timer runs while correct.`;
+      case "inclinepullup":
+        return `<b>Incline Pull-Up (body row) setup</b><br/>
+• Camera at the <b>side</b> (profile view).<br/>
+• Show shoulders → ankles (straight body line).<br/>
+<b>Checks:</b> body straight + pull (elbows bend) + full lower/extend; counts reps.`;
+      case "situp":
+        return `<b>Sit-Ups setup</b><br/>• Side view: knees, hips, shoulders visible.<br/><b>Checks:</b> knees bent, torso rises, controlled return.`;
+      case "sitreach":
+        return `<b>Sit-and-Reach setup</b><br/>• Side view: hips, knees, ankles, hands visible.<br/><b>Checks:</b> legs straight, forward reach, avoid knee bend.`;
+      case "broadjump":
+        return `<b>Standing Broad Jump setup</b><br/>• Side view showing full body + ground line.<br/><b>Checks (basic):</b> squat load + balanced posture.`;
+      case "shuttlerun":
+        return `<b>Shuttle Run setup</b><br/>This station provides a <b>basic sprint form</b> check only (not timing/line-touch).`;
+      default:
+        return "";
+    }
+  }
+
+  // ===========================
+  // Per-station stats
+  // ===========================
+  const STATIONS = ["flexarmhang","inclinepullup","situp","sitreach","broadjump","shuttlerun"];
+  const stationStats = {};
+  for (const s of STATIONS) stationStats[s] = {
+    reps: 0, correctFrames: 0, totalFrames: 0,
+    lastLabel: "—", lastOk: false,
+    repState: "up",
+    holdStartMs: null, // for flexed arm hang (hold time)
+    holdSeconds: 0
+  };
+
+  function resetStation(s) {
+    stationStats[s].reps = 0;
+    stationStats[s].correctFrames = 0;
+    stationStats[s].totalFrames = 0;
+    stationStats[s].lastLabel = "—";
+    stationStats[s].lastOk = false;
+    stationStats[s].repState = (s === "situp") ? "down" : "up";
+    stationStats[s].holdStartMs = null;
+    stationStats[s].holdSeconds = 0;
+  }
+  function resetAllStations() { for (const s of STATIONS) resetStation(s); }
+  function pct(s) {
+    const t = stationStats[s].totalFrames || 0;
+    const c = stationStats[s].correctFrames || 0;
+    return t ? Math.round((c / t) * 100) : 0;
+  }
+
+  // ===========================
+  // Evaluators (posture + reps/hold)
+  // ===========================
+  function evaluateFlexArmHang(landmarks) {
+    // Heuristic: elbows flexed and nose above wrist line (chin-above-bar proxy).
+    const Ls = landmarks[LM.L_SHOULDER], Le = landmarks[LM.L_ELBOW], Lw = landmarks[LM.L_WRIST];
+    const Rs = landmarks[LM.R_SHOULDER], Re = landmarks[LM.R_ELBOW], Rw = landmarks[LM.R_WRIST];
+    const N  = landmarks[LM.NOSE];
+
+    if (![Ls,Le,Lw,Rs,Re,Rw,N].every(p => visOK(p, 0.35))) {
+      return { ok:false, label:"MOVE INTO FRAME", detail:"Show shoulders, elbows, wrists, and face clearly.", repDelta:0, holdMode:true };
+    }
+
+    const leftElbow = angleABC(Ls, Le, Lw);
+    const rightElbow = angleABC(Rs, Re, Rw);
+
+    const strict = strictOn();
+    const elbowFlexOK = (leftElbow < (strict ? 95 : 110)) && (rightElbow < (strict ? 95 : 110));
+
+    // Nose above average wrist height (smaller y is higher on image)
+    const wristY = (Lw.y + Rw.y) / 2;
+    const chinAboveHandsProxy = N.y < (wristY - (strict ? 0.02 : 0.00));
+
+    // also ensure wrists are at/above shoulders (reduces false positives)
+    const wristsAboveShoulders = (Lw.y < Ls.y + 0.05) && (Rw.y < Rs.y + 0.05);
+
+    const ok = elbowFlexOK && wristsAboveShoulders && chinAboveHandsProxy;
+
+    let detail = `Elbow L/R: ${leftElbow.toFixed(0)}° / ${rightElbow.toFixed(0)}°`;
+    detail += `<br/>Nose vs wrists: ${(N.y < wristY ? "above" : "below")} (proxy)`;
+    if (!elbowFlexOK) detail += "<br/>Fix: keep elbows flexed (chin-up position).";
+    else if (!wristsAboveShoulders) detail += "<br/>Fix: maintain hang position with wrists near/above shoulders.";
+    else if (!chinAboveHandsProxy) detail += "<br/>Fix: chin/nose above hands (proxy for chin above bar).";
+
+    return { ok, label: ok ? "CORRECT HOLD" : "INCORRECT", detail, repDelta:0, holdMode:true };
+  }
+
+  function evaluateInclinePullUp(landmarks) {
+    // Body row: body straight + elbow bend for rep.
+    const side = pickSide(landmarks);
+    const S = getPt(landmarks, side, "SHOULDER");
+    const E = getPt(landmarks, side, "ELBOW");
+    const W = getPt(landmarks, side, "WRIST");
+    const H = getPt(landmarks, side, "HIP");
+    const K = getPt(landmarks, side, "KNEE");
+    const A = getPt(landmarks, side, "ANKLE");
+
+    if (![S,E,W,H,K,A].every(p => visOK(p, 0.40))) {
+      return { ok:false, label:"MOVE INTO FRAME", detail:"Side view: show shoulder→ankle (full body).", repDelta:0, holdMode:false };
+    }
+
+    const elbowAng = angleABC(S, E, W);
+    const hipAng = angleABC(S, H, K);
+    const kneeAng = angleABC(H, K, A);
+
+    const strict = strictOn();
+    const minStraight = strict ? 165 : 155;
+    const straightOK = (hipAng >= minStraight) && (kneeAng >= minStraight);
+
+    // Rep FSM on elbow angle
+    const st = stationStats["inclinepullup"];
+    const pullTh = strict ? 90 : 105;     // "up" position (pulled)
+    const extendTh = strict ? 160 : 150;  // "down" position (extended)
+
+    let repDelta = 0;
+    if (st.repState === "down" && elbowAng < pullTh) st.repState = "up";
+    if (st.repState === "up" && elbowAng > extendTh) { st.repState = "down"; repDelta = 1; }
+
+    // Valid form: keep straight line + show meaningful pull/extend
+    const ok = straightOK;
+
+    let detail = `Elbow: ${elbowAng.toFixed(0)}° | Hip: ${hipAng.toFixed(0)}° | Knee: ${kneeAng.toFixed(0)}°`;
+    if (!straightOK) detail += "<br/>Fix: keep body straight (avoid hips sagging).";
+    detail += "<br/>Rep tip: pull until elbows bend deeply, then extend fully.";
+
+    return { ok, label: ok ? "FORM OK" : "FORM FIX", detail, repDelta, holdMode:false };
+  }
+
+  function evaluateSitup(landmarks) {
+    const side = pickSide(landmarks);
+    const S = getPt(landmarks, side, "SHOULDER");
+    const H = getPt(landmarks, side, "HIP");
+    const K = getPt(landmarks, side, "KNEE");
+    const A = getPt(landmarks, side, "ANKLE");
+
+    if (![S,H,K,A].every(p => visOK(p, 0.45))) {
+      return { ok: false, label: "MOVE INTO FRAME", detail: "Show shoulder, hip, knee, ankle (side view).", repDelta: 0, holdMode:false };
+    }
+
+    const hipFlex = angleABC(S, H, K);
+    const kneeAng = angleABC(H, K, A);
+
+    const strict = strictOn();
+    const kneeBentOK = kneeAng < (strict ? 125 : 140) && kneeAng > (strict ? 55 : 45);
+
+    const upTh   = strict ? 75 : 85;
+    const downTh = strict ? 130 : 145;
+
+    let repDelta = 0;
+    const st = stationStats["situp"];
+    if (st.repState === "down" && hipFlex < upTh) st.repState = "up";
+    if (st.repState === "up" && hipFlex > downTh) { st.repState = "down"; repDelta = 1; }
+
+    const upEnough = hipFlex < (strict ? 85 : 95) || st.repState === "up";
+    const ok = kneeBentOK && upEnough;
+
+    let detail = `Hip flex: ${hipFlex.toFixed(0)}° | Knee: ${kneeAng.toFixed(0)}°`;
+    if (!kneeBentOK) detail += "<br/>Fix: knees bent ~90°, feet planted.";
+    else if (!upEnough) detail += "<br/>Fix: lift torso higher.";
+
+    return { ok, label: ok ? "CORRECT" : "INCORRECT", detail, repDelta, holdMode:false };
+  }
+
+  function evaluateSitReach(landmarks) {
+    const side = pickSide(landmarks);
+    const H = getPt(landmarks, side, "HIP");
+    const K = getPt(landmarks, side, "KNEE");
+    const A = getPt(landmarks, side, "ANKLE");
+    const W = getPt(landmarks, side, "WRIST");
+    const S = getPt(landmarks, side, "SHOULDER");
+
+    if (![H,K,A,W,S].every(p => visOK(p, 0.45))) {
+      return { ok: false, label: "MOVE INTO FRAME", detail: "Side view: hips/knees/ankles/hands visible.", repDelta: 0, holdMode:false };
+    }
+
+    const kneeAng = angleABC(H, K, A);
+    const trunkAng = angleABC(S, H, K);
+    const strict = strictOn();
+
+    const legsStraight = kneeAng > (strict ? 168 : 155);
+    const forwardReach = trunkAng < (strict ? 105 : 120);
+
+    const ok = legsStraight && forwardReach;
+
+    let detail = `Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°`;
+    if (!legsStraight) detail += "<br/>Fix: keep knees straight.";
+    else if (!forwardReach) detail += "<br/>Fix: lean forward smoothly and reach.";
+
+    return { ok, label: ok ? "CORRECT" : "INCORRECT", detail, repDelta: 0, holdMode:false };
+  }
+
+  function evaluateBroadJump(landmarks) {
+    const side = pickSide(landmarks);
+    const H = getPt(landmarks, side, "HIP");
+    const K = getPt(landmarks, side, "KNEE");
+    const A = getPt(landmarks, side, "ANKLE");
+    const S = getPt(landmarks, side, "SHOULDER");
+
+    if (![H,K,A,S].every(p => visOK(p, 0.40))) {
+      return { ok: false, label: "MOVE INTO FRAME", detail: "Show full body in side view.", repDelta: 0, holdMode:false };
+    }
+
+    const kneeAng = angleABC(H, K, A);
+    const trunkAng = angleABC(S, H, K);
+    const strict = strictOn();
+
+    const loaded = kneeAng < (strict ? 125 : 140);
+    const leanOK = trunkAng < (strict ? 135 : 150);
+
+    const ok = loaded && leanOK;
+    let detail = `Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°`;
+    if (!loaded) detail += "<br/>Fix: deeper squat load.";
+    if (!leanOK) detail += "<br/>Fix: slight forward lean, hips back.";
+
+    return { ok, label: ok ? "CORRECT (SETUP)" : "INCORRECT", detail, repDelta: 0, holdMode:false };
+  }
+
+  function evaluateShuttleRunBasic(landmarks) {
+    const side = pickSide(landmarks);
+    const H = getPt(landmarks, side, "HIP");
+    const K = getPt(landmarks, side, "KNEE");
+    const A = getPt(landmarks, side, "ANKLE");
+    const S = getPt(landmarks, side, "SHOULDER");
+
+    if (![H,K,A,S].every(p => visOK(p, 0.45))) {
+      return { ok: false, label: "MOVE INTO FRAME", detail: "Show side view for sprint-form check.", repDelta: 0, holdMode:false };
+    }
+
+    const trunkAng = angleABC(S, H, K);
+    const kneeDrive = angleABC(H, K, A);
+    const strict = strictOn();
+
+    const leanOK = trunkAng < (strict ? 150 : 165);
+    const kneeOK = kneeDrive < (strict ? 150 : 165);
+    const ok = leanOK && kneeOK;
+
+    let detail = `Trunk: ${trunkAng.toFixed(0)}° | Knee: ${kneeDrive.toFixed(0)}°`;
+    if (!leanOK) detail += "<br/>Fix: slight forward lean from hips.";
+    if (!kneeOK) detail += "<br/>Fix: drive knees; avoid stiff legs.";
+    detail += "<br/><b>Note:</b> form-only demo.";
+
+    return { ok, label: ok ? "CORRECT (FORM)" : "INCORRECT", detail, repDelta: 0, holdMode:false };
+  }
+
+  function evaluateStation(station, landmarks) {
+    switch (station) {
+      case "flexarmhang": return evaluateFlexArmHang(landmarks);
+      case "inclinepullup": return evaluateInclinePullUp(landmarks);
+      case "situp": return evaluateSitup(landmarks);
+      case "sitreach": return evaluateSitReach(landmarks);
+      case "broadjump": return evaluateBroadJump(landmarks);
+      case "shuttlerun": return evaluateShuttleRunBasic(landmarks);
+      default: return { ok:false, label:"—", detail:"", repDelta:0, holdMode:false };
+    }
+  }
+
+  // ===========================
+  // UI wiring
+  // ===========================
+  const videoEl = document.getElementById("video");
+  const canvasEl = document.getElementById("canvas");
+  const ctx = canvasEl.getContext("2d");
+
+  const studentNameEl = document.getElementById("studentName");
+  const stationEl = document.getElementById("station");
+  const postureText = document.getElementById("postureText");
+  const repLabel = document.getElementById("repLabel");
+  const repText = document.getElementById("repText");
+  const pctText = document.getElementById("pctText");
+  const frameText = document.getElementById("frameText");
+  const hintBox = document.getElementById("hintBox");
+  const statusBox = document.getElementById("statusBox");
+  const mirrorEl = document.getElementById("mirror");
+  const showSkeletonEl = document.getElementById("showSkeleton");
+
+  const startBtn = document.getElementById("startBtn");
+  const stopBtn = document.getElementById("stopBtn");
+  const resetStationBtn = document.getElementById("resetStationBtn");
+  const resetAllBtn = document.getElementById("resetAllBtn");
+  const saveRecordBtn = document.getElementById("saveRecordBtn");
+
+  const exportCsvBtn = document.getElementById("exportCsvBtn");
+  const clearDashboardBtn = document.getElementById("clearDashboardBtn");
+  const dashBody = document.getElementById("dashBody");
+
+  let station = stationEl.value;
+
+  function stationLabel(s) {
+    return ({
+      flexarmhang: "Flexed Arm Hang",
+      inclinepullup: "Incline Pull-Up (body row)",
+      situp: "Sit-Ups",
+      sitreach: "Sit-and-Reach",
+      broadjump: "Standing Broad Jump",
+      shuttlerun: "Shuttle Run (basic)"
+    })[s] || s;
+  }
+
+  function setStatus(kind, title, htmlDetail="") {
+    const badgeClass = kind === "ok" ? "ok" : kind === "bad" ? "bad" : "warn";
+    const badgeText = kind === "ok" ? "OK" : kind === "bad" ? "FIX" : "INFO";
+    statusBox.innerHTML = `<span class="badge ${badgeClass}">${badgeText}</span><b>${title}</b><br/>${htmlDetail}`;
+  }
+
+  function updateRepLabel() {
+    repLabel.textContent = (station === "flexarmhang") ? "Hold time (s)" : "Live reps";
+  }
+
+  function updateLiveStatsUI() {
+    const st = stationStats[station];
+    repText.textContent = (station === "flexarmhang") ? st.holdSeconds.toFixed(1) : String(st.reps);
+    frameText.textContent = String(st.totalFrames);
+    pctText.textContent = `${pct(station)}%`;
+  }
+
+  stationEl.addEventListener("change", () => {
+    station = stationEl.value;
+    hintBox.innerHTML = stationHints(station);
+    postureText.textContent = "—";
+    updateRepLabel();
+    updateLiveStatsUI();
+    setStatus("warn", "Station changed", "Follow the setup hints for best results.");
+  });
+
+  hintBox.innerHTML = stationHints(station);
+  updateRepLabel();
+  updateLiveStatsUI();
+
+  // ===========================
+  // Teacher dashboard
+  // ===========================
+  const dashboard = [];
+  function renderDashboard() {
+    if (dashboard.length === 0) {
+      dashBody.innerHTML = `<tr><td colspan="7" class="muted">No saved records yet.</td></tr>`;
+      return;
+    }
+    dashBody.innerHTML = dashboard.map((r) => {
+      const pillClass = r.lastOk ? "pillOk" : "pillBad";
+      const pillText = r.lastOk ? "Correct" : "Incorrect";
+      return `
+        <tr>
+          <td>${r.time}</td>
+          <td>${escapeHtml(r.student)}</td>
+          <td>${escapeHtml(r.station)}</td>
+          <td>${r.repOrTime}</td>
+          <td>${r.pct}%</td>
+          <td>${r.frames}</td>
+          <td><span class="pill ${pillClass}">${pillText}</span> <span class="muted">${escapeHtml(r.lastLabel)}</span></td>
+        </tr>`;
+    }).join("");
+  }
+
+  saveRecordBtn.addEventListener("click", () => {
+    const student = (studentNameEl.value || "").trim() || "Unnamed";
+    const st = stationStats[station];
+    const repOrTime = (station === "flexarmhang") ? `${st.holdSeconds.toFixed(1)} s` : String(st.reps);
+    dashboard.push({
+      time: new Date().toLocaleString(),
+      student,
+      station: stationLabel(station),
+      repOrTime,
+      pct: pct(station),
+      frames: st.totalFrames,
+      lastLabel: st.lastLabel,
+      lastOk: st.lastOk
+    });
+    renderDashboard();
+    setStatus("ok", "Saved", `Saved <b>${escapeHtml(student)}</b> → <b>${escapeHtml(stationLabel(station))}</b>.`);
+  });
+
+  clearDashboardBtn.addEventListener("click", () => {
+    dashboard.length = 0;
+    renderDashboard();
+    setStatus("warn", "Dashboard cleared", "All saved records removed.");
+  });
+
+  exportCsvBtn.addEventListener("click", () => {
+    if (dashboard.length === 0) { setStatus("warn", "Nothing to export", "Save at least one record first."); return; }
+    const header = ["Time","Student","Station","RepsOrTime","CorrectPct","Frames","LastStatus","LastLabel"];
+    const rows = dashboard.map(r => [
+      r.time, r.student, r.station, String(r.repOrTime), String(r.pct), String(r.frames),
+      r.lastOk ? "Correct" : "Incorrect", r.lastLabel
+    ]);
+    const csv = [header, ...rows].map(line => line.map(csvCell).join(",")).join("\n");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `fitness_pose_dashboard_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setStatus("ok", "Exported CSV", "Downloaded dashboard CSV file.");
+  });
+
+  function csvCell(v) {
+    const s = String(v ?? "");
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  }
+
+  resetStationBtn.addEventListener("click", () => {
+    resetStation(station);
+    updateLiveStatsUI();
+    postureText.textContent = "—";
+    setStatus("warn", "Station reset", `Cleared stats for <b>${escapeHtml(stationLabel(station))}</b>.`);
+  });
+
+  resetAllBtn.addEventListener("click", () => {
+    resetAllStations();
+    updateLiveStatsUI();
+    postureText.textContent = "—";
+    setStatus("warn", "All stats reset", "Cleared stats for all stations.");
+  });
+
+  // ===========================
+  // Camera + Pose
+  // ===========================
+  let stream = null;
+  let pose = null;
+  let running = false;
+  let rafId = null;
+
+  function drawOverlay(landmarks) {
+    if (!landmarks || !showSkeletonEl.checked) return;
+    if (!POSE_CONNECTIONS_RESOLVED) return;
+    drawConnectors(ctx, landmarks, POSE_CONNECTIONS_RESOLVED, { color: "rgba(130,200,255,0.9)", lineWidth: 3 });
+    drawLandmarks(ctx, landmarks, { color: "rgba(255,255,255,0.95)", lineWidth: 1, radius: 3 });
+  }
+
+  async function initPose() {
+    if (pose) return;
+    if (!PoseCtor) throw new Error("MediaPipe Pose constructor not found. Check pose.js loaded.");
+    pose = new PoseCtor({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      enableSegmentation: false,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    pose.onResults(onResults);
+  }
+
+  async function startCamera() {
+    if (running) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("bad", "Camera not supported", "This browser does not support getUserMedia.");
+      return;
+    }
+
+    setStatus("warn", "Starting…", "Requesting camera permission.");
+    hintBox.innerHTML = stationHints(station);
+
+    try {
+      await initPose();
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      videoEl.srcObject = stream;
+      await videoEl.play();
+
+      running = true;
+      setStatus("ok", "Camera running", "Select a station and move into frame.");
+      processFrame();
+    } catch (e) {
+      console.error(e);
+      setStatus("bad", "Camera failed", `${escapeHtml(e.message || String(e))}`);
+      running = false;
+    }
+  }
+
+  function stopCamera() {
+    running = false;
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+
+    try { videoEl.pause(); } catch {}
+    videoEl.srcObject = null;
+
+    if (stream) {
+      stream.getTracks().forEach(t => t.stop());
+      stream = null;
+    }
+    setStatus("warn", "Camera stopped", "You can start again anytime.");
+  }
+
+  async function processFrame() {
+    if (!running) return;
+    try {
+      await pose.send({ image: videoEl });
+    } catch (e) {
+      console.error(e);
+      setStatus("bad", "Pose processing error", escapeHtml(e.message || String(e)));
+      stopCamera();
+      return;
+    }
+    rafId = requestAnimationFrame(processFrame);
+  }
+
+  function onResults(results) {
+    const mirrored = mirrorEl.checked;
+
+    ctx.save();
+    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    if (mirrored) { ctx.translate(canvasEl.width, 0); ctx.scale(-1, 1); }
+    ctx.drawImage(results.image, 0, 0, canvasEl.width, canvasEl.height);
+    ctx.restore();
+
+    const landmarks = results.poseLandmarks;
+    if (!landmarks) {
+      postureText.textContent = "—";
+      setStatus("warn", "No person detected", "Move into frame with better lighting.");
+      return;
+    }
+
+    const verdict = evaluateStation(station, landmarks);
+
+    const st = stationStats[station];
+    st.totalFrames += 1;
+    if (verdict.ok) st.correctFrames += 1;
+    if (verdict.repDelta) st.reps += verdict.repDelta;
+    st.lastLabel = verdict.label;
+    st.lastOk = verdict.ok;
+
+    // hold-time update
+    if (verdict.holdMode) {
+      if (verdict.ok) {
+        if (st.holdStartMs === null) st.holdStartMs = performance.now();
+        st.holdSeconds = (performance.now() - st.holdStartMs) / 1000;
+      } else {
+        st.holdStartMs = null;
+        st.holdSeconds = 0;
+      }
+    }
+
+    postureText.textContent = verdict.ok ? "Correct" : "Incorrect";
+    updateLiveStatsUI();
+
+    if (verdict.label === "MOVE INTO FRAME") setStatus("warn", verdict.label, verdict.detail);
+    else if (verdict.ok) setStatus("ok", verdict.label, verdict.detail);
+    else setStatus("bad", verdict.label, verdict.detail);
+
+    ctx.save();
+    if (mirrored) { ctx.translate(canvasEl.width, 0); ctx.scale(-1, 1); }
+    drawOverlay(landmarks);
+    ctx.restore();
+  }
+
+  startBtn.addEventListener("click", startCamera);
+  stopBtn.addEventListener("click", stopCamera);
+  renderDashboard();
+</script>
+</body>
+</html>
