@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fitness Stations Pose Checker + Teacher Dashboard (Voice + Sit-up Hands Check)</title>
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background: #0b1020; color: #e9eeff; }
+    header { padding: 14px 14px 10px; border-bottom: 1px solid rgba(255,255,255,.12); }
+    header h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .2px; }
+    header .sub { margin-top: 6px; font-size: 12px; opacity: .86; line-height: 1.35; }
+
+    .row { display: grid; grid-template-columns: 380px 1fr; gap: 12px; padding: 12px; align-items:start; }
+    @media (max-width: 1040px) { .row { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+
+    label { display: block; font-size: 12px; opacity: .9; margin: 0 0 6px 0; }
+    input[type="text"], select, button {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.25);
+      color: #e9eeff;
+      outline: none;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    button { cursor: pointer; font-weight: 750; }
+    button:active { transform: translateY(1px); }
+    .btnRow { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top:10px; }
+    .btnRow3 { display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top:10px; }
+
+    .toggle { display:flex; align-items:center; gap:10px; margin-top:10px; }
+    .toggle input { transform: scale(1.15); }
+    .hr { height: 1px; background: rgba(255,255,255,.10); margin: 10px 0; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .metric { padding: 10px; border-radius: 12px; background: rgba(0,0,0,.22); border: 1px solid rgba(255,255,255,.10); }
+    .metric .k { font-size: 12px; opacity: .85; }
+    .metric .v { font-size: 18px; font-weight: 900; margin-top: 2px; }
+
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      line-height: 1.35;
+      font-size: 12px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .ok { background: rgba(0,255,140,.16); border: 1px solid rgba(0,255,140,.35); color: #9cffd0; }
+    .bad { background: rgba(255,70,70,.18); border: 1px solid rgba(255,70,70,.35); color: #ffd0d0; }
+    .warn { background: rgba(255,200,0,.18); border: 1px solid rgba(255,200,0,.35); color: #ffe7a3; }
+
+    .hint {
+      margin-top: 10px;
+      font-size: 12px;
+      opacity: .9;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .small { font-size: 11px; opacity: .86; }
+
+    .canvasWrap { position: relative; }
+    canvas { width: 100%; height: auto; border-radius: 16px; border: 1px solid rgba(255,255,255,.12); background: #070b16; }
+    video { display:none; }
+
+    table { width:100%; border-collapse: collapse; }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      padding: 8px 6px;
+      font-size: 12px;
+      text-align:left;
+      vertical-align: top;
+    }
+    th { opacity:.9; font-size: 12px; }
+    .muted { opacity:.75; }
+    .pill {
+      display:inline-block; padding:2px 8px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.18); background:rgba(0,0,0,.18);
+      font-weight:800; font-size:11px;
+    }
+    .pillOk { border-color: rgba(0,255,140,.35); background: rgba(0,255,140,.12); color:#9cffd0; }
+    .pillBad { border-color: rgba(255,70,70,.35); background: rgba(255,70,70,.14); color:#ffd0d0; }
+  </style>
+</head>
+
+<body>
+<header>
+  <h1>Fitness Stations Pose Checker + Teacher Dashboard</h1>
+  <div class="sub">
+    ✅ Added <b>Voice feedback</b> (optional) to guide students. ✅ Sit-ups: if hands leave the head, reps will <b>not</b> be counted.
+    <br/><span class="muted">Tip: Voice works best when the page is opened via HTTPS (GitHub Pages / Netlify). Some browsers require a user click before speaking.</span>
+  </div>
+</header>
+
+<div class="row">
+  <div class="panel">
+    <label for="studentName">Student name</label>
+    <input id="studentName" type="text" placeholder="e.g., 6RS • Aditi" />
+
+    <div class="hr"></div>
+
+    <label for="station">Station to monitor</label>
+    <select id="station">
+      <option value="flexarmhang">1) Flexed Arm Hang</option>
+      <option value="inclinedpullup">2) Inclined Pull-Up</option>
+      <option value="situp">3) Sit-Ups</option>
+      <option value="sitreach">4) Sit-and-Reach</option>
+      <option value="broadjump">5) Standing Broad Jump</option>
+      <option value="shuttlerun">6) Shuttle Run (basic)</option>
+    </select>
+
+    <div class="grid2" style="margin-top:10px;">
+      <div class="metric">
+        <div class="k">Live posture</div>
+        <div class="v" id="postureText">—</div>
+      </div>
+      <div class="metric">
+        <div class="k" id="primaryMetricLabel">Hold / Reps</div>
+        <div class="v" id="primaryMetricValue">0</div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px;">
+      <div class="metric">
+        <div class="k">Correctness % (this station)</div>
+        <div class="v" id="pctText">0%</div>
+      </div>
+      <div class="metric">
+        <div class="k">Frames sampled</div>
+        <div class="v" id="frameText">0</div>
+      </div>
+    </div>
+
+    <div class="toggle">
+      <input type="checkbox" id="mirror" checked />
+      <label for="mirror" style="margin:0">Mirror view (selfie)</label>
+    </div>
+    <div class="toggle">
+      <input type="checkbox" id="showSkeleton" checked />
+      <label for="showSkeleton" style="margin:0">Show skeleton overlay</label>
+    </div>
+    <div class="toggle">
+      <input type="checkbox" id="strict" />
+      <label for="strict" style="margin:0">Strict mode</label>
+    </div>
+
+    <div class="hr"></div>
+
+    <div class="toggle">
+      <input type="checkbox" id="voiceOn" />
+      <label for="voiceOn" style="margin:0"><b>Voice feedback</b> (coach mode)</label>
+    </div>
+    <div class="grid2" style="margin-top:10px;">
+      <div>
+        <label for="voiceRate">Voice speed</label>
+        <select id="voiceRate">
+          <option value="0.9">Slow</option>
+          <option value="1" selected>Normal</option>
+          <option value="1.1">Fast</option>
+        </select>
+      </div>
+      <div>
+        <label for="voiceCooldown">Voice frequency</label>
+        <select id="voiceCooldown">
+          <option value="1200">Often</option>
+          <option value="2500" selected>Normal</option>
+          <option value="4000">Less often</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:10px;">
+  <div>
+    <label for="cameraSelect">Camera</label>
+    <select id="cameraSelect">
+      <option value="auto">Auto (default)</option>
+    </select>
+    <div class="small muted" id="cameraNote" style="margin-top:6px;">If you don’t see cameras, click Start once to grant permission, then Retry.</div>
+  </div>
+  <div>
+    <label for="resMode">Resolution</label>
+    <select id="resMode">
+      <option value="auto" selected>Auto (recommended)</option>
+      <option value="1280x720">1280 × 720</option>
+      <option value="960x540">960 × 540</option>
+      <option value="640x480">640 × 480</option>
+      <option value="320x240">320 × 240</option>
+    </select>
+    <div class="toggle" style="margin-top:8px;">
+      <input type="checkbox" id="fallbackOn" checked />
+      <label for="fallbackOn" style="margin:0">Fallback if camera fails</label>
+    </div>
+  </div>
+</div>
+
+<div class="btnRow" style="margin-top:10px;">
+  <button id="startBtn">Start Camera</button>
+  <button id="stopBtn">Stop Camera</button>
+</div>
+
+<div class="btnRow" style="margin-top:10px;">
+  <button id="retryBtn">Retry Camera</button>
+  <button id="permHelpBtn">Camera Help</button>
+</div>
+
+    <div class="btnRow3">
+      <button id="resetStationBtn">Reset Station Stats</button>
+      <button id="resetAllBtn">Reset All Stats</button>
+      <button id="saveRecordBtn">Save to Dashboard</button>
+    </div>
+
+    <div class="status" id="statusBox">
+      <span class="badge warn">READY</span>
+      Click <b>Start Camera</b>, select a station, and move into frame.
+    </div>
+
+<div class="status" id="camErrorBox" style="display:none; margin-top:10px;">
+  <span class="badge bad">ERROR</span><b>Camera error</b><br/>
+  <div id="camErrorText" class="muted" style="margin-top:6px; white-space:pre-wrap;"></div>
+</div>
+
+    <div class="hint" id="hintBox"></div>
+
+    <div class="hint small">
+      <b>Voice feedback:</b> the app will gently prompt the student when posture is incorrect (rate-limited to avoid spamming).
+      <br/><b>Sit-ups rule:</b> hands must stay near the ears/temples (on/near the head). If hands move away, the rep will not count.
+    </div>
+  </div>
+
+  <div class="panel canvasWrap">
+    <video id="video" playsinline></video>
+    <canvas id="canvas" width="1280" height="720"></canvas>
+
+    <div class="hr"></div>
+
+    <div class="panel" style="padding:12px; margin-top:10px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div style="font-weight:900;">Teacher Dashboard</div>
+        <div style="display:flex; gap:10px;">
+          <button id="exportCsvBtn" style="width:auto; padding:8px 10px;">Export CSV</button>
+          <button id="clearDashboardBtn" style="width:auto; padding:8px 10px;">Clear</button>
+        </div>
+      </div>
+
+      <div class="hint small" style="margin-top:10px;">
+        Tip: Monitor one student → click <b>Save to Dashboard</b>. Repeat for next student. Export when done.
+      </div>
+
+      <div style="overflow:auto; margin-top:10px; max-height: 320px;">
+        <table id="dashTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Student</th>
+              <th>Station</th>
+              <th>Metric</th>
+              <th>Correct %</th>
+              <th>Frames</th>
+              <th>Last status</th>
+            </tr>
+          </thead>
+          <tbody id="dashBody">
+            <tr><td colspan="7" class="muted">No saved records yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+
+<script>
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"
+    }[c]));
+  }
+  function angleABC(A, B, C) {
+    const ab = { x: A.x - B.x, y: A.y - B.y };
+    const cb = { x: C.x - B.x, y: C.y - B.y };
+    const dot = (ab.x * cb.x + ab.y * cb.y);
+    const magAB = Math.hypot(ab.x, ab.y);
+    const magCB = Math.hypot(cb.x, cb.y);
+    const denom = (magAB * magCB) || 1e-6;
+    const cos = clamp(dot / denom, -1, 1);
+    return Math.acos(cos) * (180 / Math.PI);
+  }
+  function dist(A, B) { return Math.hypot(A.x - B.x, A.y - B.y); }
+
+  const PoseCtor = (typeof Pose === "function") ? Pose : (Pose && Pose.Pose ? Pose.Pose : null);
+  const POSE_CONNECTIONS_RESOLVED = (typeof POSE_CONNECTIONS !== "undefined")
+    ? POSE_CONNECTIONS
+    : (Pose && Pose.POSE_CONNECTIONS ? Pose.POSE_CONNECTIONS : null);
+
+  const LM = {
+    NOSE: 0,
+    L_EAR: 7, R_EAR: 8,
+    L_SHOULDER: 11, R_SHOULDER: 12,
+    L_ELBOW: 13,    R_ELBOW: 14,
+    L_WRIST: 15,    R_WRIST: 16,
+    L_HIP: 23,      R_HIP: 24,
+    L_KNEE: 25,     R_KNEE: 26,
+    L_ANKLE: 27,    R_ANKLE: 28,
+  };
+
+  function visOK(lm, min=0.55) { return lm && (lm.visibility === undefined || lm.visibility >= min); }
+
+  function pickSide(landmarks) {
+    const leftScore =
+      (landmarks[LM.L_SHOULDER]?.visibility||0) +
+      (landmarks[LM.L_ELBOW]?.visibility||0) +
+      (landmarks[LM.L_WRIST]?.visibility||0) +
+      (landmarks[LM.L_HIP]?.visibility||0) +
+      (landmarks[LM.L_KNEE]?.visibility||0) +
+      (landmarks[LM.L_ANKLE]?.visibility||0);
+    const rightScore =
+      (landmarks[LM.R_SHOULDER]?.visibility||0) +
+      (landmarks[LM.R_ELBOW]?.visibility||0) +
+      (landmarks[LM.R_WRIST]?.visibility||0) +
+      (landmarks[LM.R_HIP]?.visibility||0) +
+      (landmarks[LM.R_KNEE]?.visibility||0) +
+      (landmarks[LM.R_ANKLE]?.visibility||0);
+    return (rightScore >= leftScore) ? "R" : "L";
+  }
+
+  function getPt(landmarks, side, part) {
+    const idx = LM[(side==="R" ? "R_" : "L_") + part];
+    return landmarks[idx];
+  }
+
+  const strictEl = document.getElementById("strict");
+  function strictOn() { return strictEl.checked; }
+
+  function stationHints(station) {
+    switch (station) {
+      case "flexarmhang": return `<b>Flexed Arm Hang</b><br/>Camera front/diagonal. Show shoulders, elbows, wrists.`;
+      case "inclinedpullup": return `<b>Inclined Pull-Up</b><br/>Side view. Keep body straight; pull up then full extension.`;
+      case "situp": return `<b>Sit-Ups</b><br/>Side view. <b>Hands must stay on/near head</b> (near ears) or reps won't count.`;
+      case "sitreach": return `<b>Sit-and-Reach</b><br/>Side view. Keep knees straight; reach forward.`;
+      case "broadjump": return `<b>Standing Broad Jump</b><br/>Side view full body. Good squat load + balance.`;
+      case "shuttlerun": return `<b>Shuttle Run</b><br/>Basic sprint-form check only.`;
+      default: return "";
+    }
+  }
+
+  function stationLabel(s) {
+    return ({
+      flexarmhang: "Flexed Arm Hang",
+      inclinedpullup: "Inclined Pull-Up",
+      situp: "Sit-Ups",
+      sitreach: "Sit-and-Reach",
+      broadjump: "Standing Broad Jump",
+      shuttlerun: "Shuttle Run (basic)"
+    })[s] || s;
+  }
+
+  function stationPrimaryMetricLabel(s) { return (s === "flexarmhang") ? "Hold time (s)" : "Reps"; }
+
+  // Voice
+  const voiceOnEl = document.getElementById("voiceOn");
+  const voiceRateEl = document.getElementById("voiceRate");
+  const voiceCooldownEl = document.getElementById("voiceCooldown");
+  let lastSpokenAt = 0;
+  let lastSpokenKey = "";
+  let lastVerdictOk = null;
+
+  function canSpeak() { return voiceOnEl.checked && ("speechSynthesis" in window); }
+
+  function speakOnce(text, key) {
+    if (!canSpeak()) return;
+    const now = performance.now();
+    const cooldown = parseInt(voiceCooldownEl.value, 10) || 2500;
+    if (now - lastSpokenAt < cooldown) return;
+    if (key && key === lastSpokenKey && (now - lastSpokenAt) < (cooldown * 2)) return;
+
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = parseFloat(voiceRateEl.value || "1");
+      u.pitch = 1.0;
+      u.lang = "en-SG";
+      window.speechSynthesis.speak(u);
+      lastSpokenAt = now;
+      lastSpokenKey = key || text;
+    } catch {}
+  }
+
+  function maybeVoiceCoach(verdict) {
+    if (!canSpeak()) return;
+    const ok = !!verdict.ok;
+    if (lastVerdictOk === null) lastVerdictOk = ok;
+
+    const key = (verdict.voiceKey || verdict.label || "") + "|" + (verdict.voiceText || "");
+    if (!ok) {
+      if (verdict.voiceText) speakOnce(verdict.voiceText, key);
+    } else {
+      if (lastVerdictOk === false) speakOnce("Good, keep it there.", "praise");
+    }
+    lastVerdictOk = ok;
+  }
+
+  // Stats
+  const STATIONS = ["flexarmhang","inclinedpullup","situp","sitreach","broadjump","shuttlerun"];
+  const stationStats = {};
+  for (const s of STATIONS) stationStats[s] = { reps:0, correctFrames:0, totalFrames:0, lastLabel:"—", lastOk:false, repState:"down", holdStartMs:null, holdSeconds:0 };
+
+  function resetStation(s) {
+    stationStats[s] = { reps:0, correctFrames:0, totalFrames:0, lastLabel:"—", lastOk:false, repState:"down", holdStartMs:null, holdSeconds:0 };
+  }
+  function resetAllStations() { for (const s of STATIONS) resetStation(s); }
+  function pct(s) { const t=stationStats[s].totalFrames||0; const c=stationStats[s].correctFrames||0; return t?Math.round(c/t*100):0; }
+
+  // Evaluators
+  function evaluateFlexArmHang(lm) {
+    const LS=lm[LM.L_SHOULDER], LE=lm[LM.L_ELBOW], LW=lm[LM.L_WRIST];
+    const RS=lm[LM.R_SHOULDER], RE=lm[LM.R_ELBOW], RW=lm[LM.R_WRIST];
+    const haveLeft=[LS,LE,LW].every(p=>visOK(p,0.45));
+    const haveRight=[RS,RE,RW].every(p=>visOK(p,0.45));
+    if(!haveLeft && !haveRight) return {ok:false,label:"MOVE INTO FRAME",detail:"Show shoulders, elbows, wrists.",repDelta:0,voiceText:"Step closer. Show your arms clearly.",voiceKey:"fah_frame"};
+
+    const strict=strictOn();
+    const maxElbow=strict?95:105;
+    const wristAbove=strict?0.00:0.01;
+
+    let okLeft=false, okRight=false, aL=null, aR=null;
+    if(haveLeft){ aL=angleABC(LS,LE,LW); okLeft=(aL<maxElbow)&&(LW.y<LS.y+wristAbove); }
+    if(haveRight){ aR=angleABC(RS,RE,RW); okRight=(aR<maxElbow)&&(RW.y<RS.y+wristAbove); }
+    const ok=(haveLeft && haveRight)?(okLeft && okRight):(okLeft || okRight);
+
+    let detail="";
+    if(aL!==null) detail+=`Left elbow: ${aL.toFixed(0)}° `;
+    if(aR!==null) detail+=`Right elbow: ${aR.toFixed(0)}°`;
+    detail=detail.trim();
+
+    if(ok) return {ok:true,label:"CORRECT HOLD",detail,repDelta:0,voiceText:"",voiceKey:""};
+    return {ok:false,label:"INCORRECT",detail:detail+"<br/>Fix: bend elbows more and hold high.",repDelta:0,voiceText:"Bend your elbows more and hold your chin high.",voiceKey:"fah_fix"};
+  }
+
+  function evaluateInclinedPullup(lm) {
+    const side=pickSide(lm);
+    const S=getPt(lm,side,"SHOULDER"),E=getPt(lm,side,"ELBOW"),W=getPt(lm,side,"WRIST");
+    const H=getPt(lm,side,"HIP"),K=getPt(lm,side,"KNEE"),A=getPt(lm,side,"ANKLE");
+    if(![S,E,W,H,K,A].every(p=>visOK(p,0.45))) return {ok:false,label:"MOVE INTO FRAME",detail:"Side view shoulder→ankle visible.",repDelta:0,voiceText:"Turn sideways so your whole body is visible.",voiceKey:"ip_frame"};
+
+    const elbowAng=angleABC(S,E,W);
+    const hipAng=angleABC(S,H,K);
+    const kneeAng=angleABC(H,K,A);
+    const strict=strictOn();
+    const minStraight=strict?165:155;
+    const straightOK=(hipAng>=minStraight)&&(kneeAng>=minStraight);
+
+    const dSW=dist(S,W);
+    const upDist=strict?0.16:0.18;
+    const downDist=strict?0.22:0.25;
+    const upElbow=strict?95:105;
+    const downElbow=strict?165:150;
+
+    const st=stationStats["inclinedpullup"];
+    let repDelta=0;
+    if(st.repState==="down" && elbowAng<upElbow && dSW<upDist) st.repState="up";
+    if(st.repState==="up" && elbowAng>downElbow && dSW>downDist){ st.repState="down"; repDelta=1; }
+
+    const topOK=(elbowAng<(strict?105:115))&&(dSW<(strict?0.18:0.20));
+    const ok= straightOK && (topOK || st.repState==="up");
+
+    let detail=`Elbow: ${elbowAng.toFixed(0)}° | Hip: ${hipAng.toFixed(0)}° | Knee: ${kneeAng.toFixed(0)}°`;
+    if(!straightOK) return {ok:false,label:"INCORRECT",detail:detail+"<br/>Fix: keep body straight.",repDelta,voiceText:"Keep your body straight. Don’t let your hips drop.",voiceKey:"ip_straight"};
+    if(!topOK && st.repState!=="up") return {ok:false,label:"INCORRECT",detail:detail+"<br/>Fix: pull higher.",repDelta,voiceText:"Pull higher. Bend your elbows more.",voiceKey:"ip_pull"};
+    return {ok:true,label:"CORRECT",detail,repDelta,voiceText:"",voiceKey:""};
+  }
+
+  function handsOnHeadOK(lm){
+    const LE=lm[LM.L_EAR], RE=lm[LM.R_EAR];
+    const LW=lm[LM.L_WRIST], RW=lm[LM.R_WRIST];
+    const haveLeft=[LE,LW].every(p=>visOK(p,0.35));
+    const haveRight=[RE,RW].every(p=>visOK(p,0.35));
+    if(!haveLeft && !haveRight) return false;
+    const strict=strictOn();
+    const th=strict?0.12:0.16;
+    let okLeft=false, okRight=false;
+    if(haveLeft) okLeft=dist(LW,LE)<th;
+    if(haveRight) okRight=dist(RW,RE)<th;
+    return (haveLeft && haveRight) ? (okLeft && okRight) : (okLeft || okRight);
+  }
+
+  function evaluateSitup(lm){
+    const side=pickSide(lm);
+    const S=getPt(lm,side,"SHOULDER"), H=getPt(lm,side,"HIP"), K=getPt(lm,side,"KNEE"), A=getPt(lm,side,"ANKLE");
+    if(![S,H,K,A].every(p=>visOK(p,0.45))) return {ok:false,label:"MOVE INTO FRAME",detail:"Side view: shoulder, hip, knee, ankle.",repDelta:0,voiceText:"Turn sideways. I need to see your shoulder, hip, knee and ankle.",voiceKey:"su_frame"};
+
+    const handsOK=handsOnHeadOK(lm);
+    const st=stationStats["situp"];
+    if(!handsOK){
+      st.repState="down";
+      return {ok:false,label:"HANDS OFF HEAD",detail:"Hands must stay on/near head (near ears). Rep will not count.",repDelta:0,voiceText:"Keep your hands on your head.",voiceKey:"su_hands"};
+    }
+
+    const hipFlex=angleABC(S,H,K);
+    const kneeAng=angleABC(H,K,A);
+    const strict=strictOn();
+    const kneeBentOK = kneeAng < (strict?125:140) && kneeAng > (strict?55:45);
+    if(!kneeBentOK){
+      st.repState="down";
+      return {ok:false,label:"INCORRECT",detail:`Hip: ${hipFlex.toFixed(0)}° | Knee: ${kneeAng.toFixed(0)}°<br/>Fix: knees bent, feet planted.`,repDelta:0,voiceText:"Bend your knees and keep your feet on the ground.",voiceKey:"su_knee"};
+    }
+
+    const upTh = strict?75:85;
+    const downTh = strict?130:145;
+    let repDelta=0;
+    if(st.repState==="down" && hipFlex<upTh) st.repState="up";
+    if(st.repState==="up" && hipFlex>downTh){ st.repState="down"; repDelta=1; }
+
+    const upEnough = hipFlex < (strict?85:95) || st.repState==="up";
+    if(!upEnough) return {ok:false,label:"INCORRECT",detail:`Hip: ${hipFlex.toFixed(0)}° | Knee: ${kneeAng.toFixed(0)}°<br/>Fix: lift torso higher.`,repDelta,voiceText:"Lift higher, then return down with control.",voiceKey:"su_lift"};
+
+    return {ok:true,label:"CORRECT",detail:`Hip: ${hipFlex.toFixed(0)}° | Knee: ${kneeAng.toFixed(0)}°`,repDelta,voiceText:"",voiceKey:""};
+  }
+
+  function evaluateSitReach(lm){
+    const side=pickSide(lm);
+    const H=getPt(lm,side,"HIP"),K=getPt(lm,side,"KNEE"),A=getPt(lm,side,"ANKLE"),W=getPt(lm,side,"WRIST"),S=getPt(lm,side,"SHOULDER");
+    if(![H,K,A,W,S].every(p=>visOK(p,0.45))) return {ok:false,label:"MOVE INTO FRAME",detail:"Side view: legs + hands visible.",repDelta:0,voiceText:"Turn sideways so I can see your legs and hands.",voiceKey:"sr_frame"};
+    const kneeAng=angleABC(H,K,A);
+    const trunkAng=angleABC(S,H,K);
+    const strict=strictOn();
+    const legsStraight=kneeAng>(strict?168:155);
+    const forwardReach=trunkAng<(strict?105:120);
+    if(!legsStraight) return {ok:false,label:"INCORRECT",detail:`Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°<br/>Fix: keep knees straight.`,repDelta:0,voiceText:"Keep your knees straight.",voiceKey:"sr_knees"};
+    if(!forwardReach) return {ok:false,label:"INCORRECT",detail:`Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°<br/>Fix: reach forward.`,repDelta:0,voiceText:"Reach forward slowly.",voiceKey:"sr_reach"};
+    return {ok:true,label:"CORRECT",detail:`Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°`,repDelta:0,voiceText:"",voiceKey:""};
+  }
+
+  function evaluateBroadJump(lm){
+    const side=pickSide(lm);
+    const H=getPt(lm,side,"HIP"),K=getPt(lm,side,"KNEE"),A=getPt(lm,side,"ANKLE"),S=getPt(lm,side,"SHOULDER");
+    if(![H,K,A,S].every(p=>visOK(p,0.40))) return {ok:false,label:"MOVE INTO FRAME",detail:"Show full body side view.",repDelta:0,voiceText:"Step back so your whole body is visible.",voiceKey:"bj_frame"};
+    const kneeAng=angleABC(H,K,A);
+    const trunkAng=angleABC(S,H,K);
+    const strict=strictOn();
+    const loaded=kneeAng<(strict?125:140);
+    const leanOK=trunkAng<(strict?135:150);
+    if(!loaded) return {ok:false,label:"INCORRECT",detail:`Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°<br/>Fix: squat deeper.`,repDelta:0,voiceText:"Squat a bit deeper before you jump.",voiceKey:"bj_load"};
+    if(!leanOK) return {ok:false,label:"INCORRECT",detail:`Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°<br/>Fix: lean slightly forward.`,repDelta:0,voiceText:"Lean slightly forward. Push your hips back.",voiceKey:"bj_lean"};
+    return {ok:true,label:"CORRECT (SETUP)",detail:`Knee: ${kneeAng.toFixed(0)}° | Trunk: ${trunkAng.toFixed(0)}°`,repDelta:0,voiceText:"",voiceKey:""};
+  }
+
+  function evaluateShuttleRunBasic(lm){
+    const side=pickSide(lm);
+    const H=getPt(lm,side,"HIP"),K=getPt(lm,side,"KNEE"),A=getPt(lm,side,"ANKLE"),S=getPt(lm,side,"SHOULDER");
+    if(![H,K,A,S].every(p=>visOK(p,0.45))) return {ok:false,label:"MOVE INTO FRAME",detail:"Side view for sprint-form check.",repDelta:0,voiceText:"Turn sideways so I can check your running form.",voiceKey:"srn_frame"};
+    const trunkAng=angleABC(S,H,K);
+    const kneeDrive=angleABC(H,K,A);
+    const strict=strictOn();
+    const leanOK=trunkAng<(strict?150:165);
+    const kneeOK=kneeDrive<(strict?150:165);
+    if(!leanOK) return {ok:false,label:"INCORRECT",detail:`Trunk: ${trunkAng.toFixed(0)}° | Knee: ${kneeDrive.toFixed(0)}°<br/>Fix: lean forward slightly.`,repDelta:0,voiceText:"Lean forward slightly from your hips.",voiceKey:"srn_lean"};
+    if(!kneeOK) return {ok:false,label:"INCORRECT",detail:`Trunk: ${trunkAng.toFixed(0)}° | Knee: ${kneeDrive.toFixed(0)}°<br/>Fix: drive knees.`,repDelta:0,voiceText:"Drive your knees.",voiceKey:"srn_knees"};
+    return {ok:true,label:"CORRECT (FORM)",detail:`Trunk: ${trunkAng.toFixed(0)}° | Knee: ${kneeDrive.toFixed(0)}°<br/><b>Note:</b> form-only demo.`,repDelta:0,voiceText:"",voiceKey:""};
+  }
+
+  function evaluateStation(station, lm){
+    switch(station){
+      case "flexarmhang": return evaluateFlexArmHang(lm);
+      case "inclinedpullup": return evaluateInclinedPullup(lm);
+      case "situp": return evaluateSitup(lm);
+      case "sitreach": return evaluateSitReach(lm);
+      case "broadjump": return evaluateBroadJump(lm);
+      case "shuttlerun": return evaluateShuttleRunBasic(lm);
+      default: return {ok:false,label:"—",detail:"",repDelta:0,voiceText:"",voiceKey:""};
+    }
+  }
+
+  // UI
+  const videoEl=document.getElementById("video");
+  const canvasEl=document.getElementById("canvas");
+  const ctx=canvasEl.getContext("2d");
+  const stationEl=document.getElementById("station");
+  const studentNameEl=document.getElementById("studentName");
+  const postureText=document.getElementById("postureText");
+  const primaryMetricLabelEl=document.getElementById("primaryMetricLabel");
+  const primaryMetricValueEl=document.getElementById("primaryMetricValue");
+  const pctText=document.getElementById("pctText");
+  const frameText=document.getElementById("frameText");
+  const hintBox=document.getElementById("hintBox");
+  const statusBox=document.getElementById("statusBox");
+  const mirrorEl=document.getElementById("mirror");
+  const showSkeletonEl=document.getElementById("showSkeleton");
+
+  const startBtn=document.getElementById("startBtn");
+  
+const cameraSelectEl=document.getElementById("cameraSelect");
+const resModeEl=document.getElementById("resMode");
+const fallbackOnEl=document.getElementById("fallbackOn");
+const retryBtn=document.getElementById("retryBtn");
+const permHelpBtn=document.getElementById("permHelpBtn");
+const camErrorBox=document.getElementById("camErrorBox");
+const camErrorText=document.getElementById("camErrorText");
+const cameraNote=document.getElementById("cameraNote");
+
+function showCamError(err, extra=""){
+  const name=err?.name?String(err.name):"Error";
+  const msg=err?.message?String(err.message):String(err||"");
+  const lines=[`name: ${name}`,`message: ${msg}`];
+  if(err?.constraint) lines.push(`constraint: ${err.constraint}`);
+  if(err?.constraintName) lines.push(`constraintName: ${err.constraintName}`);
+  if(extra) lines.push("",String(extra));
+  camErrorText.textContent=lines.join("\n");
+  camErrorBox.style.display="block";
+}
+function clearCamError(){
+  camErrorBox.style.display="none";
+  camErrorText.textContent="";
+}
+
+async function listCameras(){
+  try{
+    const devices=await navigator.mediaDevices.enumerateDevices();
+    return devices.filter(d=>d.kind==="videoinput");
+  }catch(e){ return []; }
+}
+
+async function populateCameraSelect(){
+  if(!navigator.mediaDevices?.enumerateDevices) return;
+  const cams=await listCameras();
+  const prev=cameraSelectEl.value||"auto";
+  cameraSelectEl.innerHTML="";
+  const optAuto=document.createElement("option");
+  optAuto.value="auto"; optAuto.textContent="Auto (default)";
+  cameraSelectEl.appendChild(optAuto);
+
+  if(cams.length===0){
+    const opt=document.createElement("option");
+    opt.value="none";
+    opt.textContent="No cameras detected (grant permission first)";
+    cameraSelectEl.appendChild(opt);
+    cameraSelectEl.value="auto";
+    cameraNote.textContent="Tip: Click Start once to grant permission, then Retry to list cameras.";
+    return;
+  }
+
+  cams.forEach((c,i)=>{
+    const opt=document.createElement("option");
+    opt.value=c.deviceId;
+    opt.textContent=c.label?c.label:`Camera ${i+1}`;
+    cameraSelectEl.appendChild(opt);
+  });
+
+  const exists=[...cameraSelectEl.options].some(o=>o.value===prev);
+  cameraSelectEl.value=exists?prev:"auto";
+  cameraNote.textContent="Select front/rear camera if your device shows more than one.";
+}
+
+function parseResMode(){
+  const v=resModeEl.value;
+  if(v==="auto") return null;
+  const m=/^(\d+)x(\d+)$/.exec(v);
+  if(!m) return null;
+  return {width:parseInt(m[1],10), height:parseInt(m[2],10)};
+}
+
+function buildVideoConstraints(resObj, deviceId){
+  const base={ facingMode:"user" };
+  if(deviceId && deviceId!=="auto" && deviceId!=="none"){
+    base.deviceId={ exact: deviceId };
+  }
+  if(!resObj) return base;
+  base.width={ ideal: resObj.width };
+  base.height={ ideal: resObj.height };
+  return base;
+}
+
+async function getStreamWithFallback(){
+  const deviceChoice=cameraSelectEl.value||"auto";
+  const selectedRes=parseResMode();
+  const fallback=!!fallbackOnEl.checked;
+
+  const resTryList=[];
+  if(selectedRes) resTryList.push(selectedRes);
+  else resTryList.push({width:1280,height:720},{width:960,height:540},{width:640,height:480},{width:320,height:240});
+
+  const tries=fallback ? resTryList : [selectedRes||null];
+
+  let lastErr=null;
+  for(const resObj of tries){
+    const constraints={ video: buildVideoConstraints(resObj, deviceChoice), audio:false };
+    try{
+      const s=await navigator.mediaDevices.getUserMedia(constraints);
+      return {stream:s, used: constraints.video};
+    }catch(e){
+      lastErr=e;
+    }
+  }
+  throw lastErr || new Error("Unable to start camera.");
+}
+const stopBtn=document.getElementById("stopBtn");
+  const resetStationBtn=document.getElementById("resetStationBtn");
+  const resetAllBtn=document.getElementById("resetAllBtn");
+  const saveRecordBtn=document.getElementById("saveRecordBtn");
+  const exportCsvBtn=document.getElementById("exportCsvBtn");
+  const clearDashboardBtn=document.getElementById("clearDashboardBtn");
+  const dashBody=document.getElementById("dashBody");
+
+  let station=stationEl.value;
+
+  function setStatus(kind,title,detail=""){
+    const badgeClass=kind==="ok"?"ok":kind==="bad"?"bad":"warn";
+    const badgeText=kind==="ok"?"OK":kind==="bad"?"FIX":"INFO";
+    statusBox.innerHTML=`<span class="badge ${badgeClass}">${badgeText}</span><b>${title}</b><br/>${detail}`;
+  }
+  function primaryMetricValueForStation(s){ const st=stationStats[s]; return (s==="flexarmhang")?st.holdSeconds.toFixed(1):String(st.reps); }
+  function updateLiveStatsUI(){
+    const st=stationStats[station];
+    primaryMetricLabelEl.textContent=stationPrimaryMetricLabel(station);
+    primaryMetricValueEl.textContent=primaryMetricValueForStation(station);
+    frameText.textContent=String(st.totalFrames);
+    pctText.textContent=`${pct(station)}%`;
+  }
+
+  stationEl.addEventListener("change",()=>{
+    station=stationEl.value;
+    hintBox.innerHTML=stationHints(station);
+    postureText.textContent="—";
+    updateLiveStatsUI();
+    setStatus("warn","Station changed","Follow the setup hints for best results.");
+    lastVerdictOk=null; lastSpokenKey="";
+  });
+
+  hintBox.innerHTML=stationHints(station);
+  updateLiveStatsUI();
+
+  // Dashboard
+  const dashboard=[];
+  function renderDashboard(){
+    if(dashboard.length===0){ dashBody.innerHTML=`<tr><td colspan="7" class="muted">No saved records yet.</td></tr>`; return; }
+    dashBody.innerHTML=dashboard.map(r=>{
+      const pillClass=r.lastOk?"pillOk":"pillBad";
+      const pillText=r.lastOk?"Correct":"Incorrect";
+      return `<tr>
+        <td>${r.time}</td>
+        <td>${escapeHtml(r.student)}</td>
+        <td>${escapeHtml(r.station)}</td>
+        <td>${escapeHtml(r.metric)}</td>
+        <td>${r.pct}%</td>
+        <td>${r.frames}</td>
+        <td><span class="pill ${pillClass}">${pillText}</span> <span class="muted">${escapeHtml(r.lastLabel)}</span></td>
+      </tr>`;
+    }).join("");
+  }
+
+  function csvCell(v){ const s=String(v??""); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
+
+  saveRecordBtn.addEventListener("click",()=>{
+    const student=(studentNameEl.value||"").trim()||"Unnamed";
+    const st=stationStats[station];
+    const metric=(station==="flexarmhang")?`${st.holdSeconds.toFixed(1)} s`:`${st.reps} reps`;
+    dashboard.push({ time:new Date().toLocaleString(), student, station:stationLabel(station), metric, pct:pct(station), frames:st.totalFrames, lastLabel:st.lastLabel, lastOk:st.lastOk });
+    renderDashboard();
+    setStatus("ok","Saved",`Saved <b>${escapeHtml(student)}</b> → <b>${escapeHtml(stationLabel(station))}</b>.`);
+    speakOnce("Saved.", "saved");
+  });
+
+  clearDashboardBtn.addEventListener("click",()=>{ dashboard.length=0; renderDashboard(); setStatus("warn","Dashboard cleared","All saved records removed."); });
+  exportCsvBtn.addEventListener("click",()=>{
+    if(dashboard.length===0){ setStatus("warn","Nothing to export","Save at least one record first."); return; }
+    const header=["Time","Student","Station","Metric","CorrectPct","Frames","LastStatus","LastLabel"];
+    const rows=dashboard.map(r=>[r.time,r.student,r.station,r.metric,String(r.pct),String(r.frames),r.lastOk?"Correct":"Incorrect",r.lastLabel]);
+    const csv=[header,...rows].map(line=>line.map(csvCell).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download=`fitness_pose_dashboard_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    setStatus("ok","Exported CSV","Downloaded dashboard CSV file.");
+  });
+
+  resetStationBtn.addEventListener("click",()=>{ resetStation(station); updateLiveStatsUI(); postureText.textContent="—"; setStatus("warn","Station reset",`Cleared stats for <b>${escapeHtml(stationLabel(station))}</b>.`); lastVerdictOk=null; });
+  resetAllBtn.addEventListener("click",()=>{ resetAllStations(); updateLiveStatsUI(); postureText.textContent="—"; setStatus("warn","All stats reset","Cleared stats for all stations."); lastVerdictOk=null; });
+
+  // Camera + Pose
+  let stream=null, pose=null, running=false, rafId=null;
+
+  function drawOverlay(lm){
+    if(!lm || !showSkeletonEl.checked || !POSE_CONNECTIONS_RESOLVED) return;
+    drawConnectors(ctx,lm,POSE_CONNECTIONS_RESOLVED,{color:"rgba(130,200,255,0.9)",lineWidth:3});
+    drawLandmarks(ctx,lm,{color:"rgba(255,255,255,0.95)",lineWidth:1,radius:3});
+  }
+
+  async function initPose(){
+    if(pose) return;
+    if(!PoseCtor) throw new Error("MediaPipe Pose constructor not found. Check pose.js load.");
+    pose=new PoseCtor({ locateFile:(file)=>`https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+    pose.setOptions({ modelComplexity:1, smoothLandmarks:true, enableSegmentation:false, minDetectionConfidence:0.5, minTrackingConfidence:0.5 });
+    pose.onResults(onResults);
+  }
+
+  async function startCamera(){
+  if(running) return;
+  clearCamError();
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    setStatus("bad","Camera not supported","This browser does not support getUserMedia.");
+    showCamError({name:"NotSupportedError", message:"navigator.mediaDevices.getUserMedia is not available."});
+    return;
+  }
+
+  setStatus("warn","Starting…","Requesting camera permission.");
+  hintBox.innerHTML=stationHints(station);
+
+  try{
+    await initPose();
+
+    const got=await getStreamWithFallback();
+    stream=got.stream;
+
+    videoEl.srcObject=stream;
+    await videoEl.play();
+
+    // After permission, labels are available
+    await populateCameraSelect();
+
+    running=true;
+    const used=got.used||{};
+    const usedText=`Using: ${used.deviceId?.exact?"Selected camera":(used.facingMode||"auto")} | ${used.width?.ideal?used.width.ideal:"auto"}×${used.height?.ideal?used.height.ideal:"auto"}`;
+    setStatus("ok","Camera running",`Select a station and move into frame.<br/><span class="muted">${usedText}</span>`);
+
+    if(canSpeak()) speakOnce("Coach mode on.","coach_on");
+    processFrame();
+  }catch(e){
+    console.error(e);
+    running=false;
+
+    const name=e?.name||"CameraError";
+    const msg=e?.message||String(e);
+
+    let help="";
+    if(name==="NotAllowedError" || name==="SecurityError"){
+      help="Permission denied. Click the lock icon → Site settings → Camera: Allow, then Retry.";
+    }else if(name==="NotFoundError"){
+      help="No camera found. Check device camera availability or try a different browser/device.";
+    }else if(name==="NotReadableError"){
+      help="Camera is already in use by another app (Zoom/Meet/Teams). Close it and Retry.";
+    }else if(name==="OverconstrainedError"){
+      help="Constraint failed. Turn on Fallback or choose a lower resolution, then Retry.";
+    }
+
+    setStatus("bad","Camera failed",`${escapeHtml(name)}: ${escapeHtml(msg)}<br/><span class="muted">${escapeHtml(help)}</span>`);
+    showCamError(e, help);
+  }
+}
+
+function stopCamera(){
+    running=false;
+    if(rafId) cancelAnimationFrame(rafId);
+    rafId=null;
+    try{ videoEl.pause(); }catch{}
+    videoEl.srcObject=null;
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    setStatus("warn","Camera stopped","You can start again anytime.");
+    if(canSpeak()) speakOnce("Camera stopped.", "cam_stop");
+  }
+
+  async function processFrame(){
+    if(!running) return;
+    try{ await pose.send({image:videoEl}); }
+    catch(e){ console.error(e); setStatus("bad","Pose processing error",escapeHtml(e.message||String(e))); stopCamera(); return; }
+    rafId=requestAnimationFrame(processFrame);
+  }
+
+  function updateHoldTimerIfNeeded(ok){
+    if(station!=="flexarmhang") return;
+    const st=stationStats["flexarmhang"];
+    if(ok){
+      if(st.holdStartMs===null) st.holdStartMs=performance.now();
+      st.holdSeconds=(performance.now()-st.holdStartMs)/1000.0;
+    }else{
+      st.holdStartMs=null; st.holdSeconds=0;
+    }
+  }
+
+  function onResults(results){
+    const mirrored=mirrorEl.checked;
+    ctx.save();
+    ctx.clearRect(0,0,canvasEl.width,canvasEl.height);
+    if(mirrored){ ctx.translate(canvasEl.width,0); ctx.scale(-1,1); }
+    ctx.drawImage(results.image,0,0,canvasEl.width,canvasEl.height);
+    ctx.restore();
+
+    const lm=results.poseLandmarks;
+    if(!lm){
+      postureText.textContent="—";
+      setStatus("warn","No person detected","Move into frame with better lighting.");
+      if(canSpeak()) speakOnce("Move into the camera view.", "no_person");
+      return;
+    }
+
+    const verdict=evaluateStation(station,lm);
+    const st=stationStats[station];
+    st.totalFrames+=1;
+    if(verdict.ok) st.correctFrames+=1;
+    if(verdict.repDelta) st.reps+=verdict.repDelta;
+    st.lastLabel=verdict.label;
+    st.lastOk=verdict.ok;
+
+    if(station==="flexarmhang") updateHoldTimerIfNeeded(verdict.ok);
+
+    postureText.textContent=verdict.ok?"Correct":"Incorrect";
+    updateLiveStatsUI();
+
+    if(verdict.label==="MOVE INTO FRAME") setStatus("warn",verdict.label,verdict.detail);
+    else if(verdict.ok) setStatus("ok",verdict.label,verdict.detail);
+    else setStatus("bad",verdict.label,verdict.detail);
+
+    maybeVoiceCoach(verdict);
+
+    ctx.save();
+    if(mirrored){ ctx.translate(canvasEl.width,0); ctx.scale(-1,1); }
+    drawOverlay(lm);
+    ctx.restore();
+  }
+
+  startBtn.addEventListener("click", startCamera);
+stopBtn.addEventListener("click", stopCamera);
+
+retryBtn.addEventListener("click", async ()=>{
+  clearCamError();
+  stopCamera();
+  await populateCameraSelect();
+  startCamera();
+});
+
+permHelpBtn.addEventListener("click", ()=>{
+  const isHttps = location.protocol==="https:" || location.hostname==="localhost";
+  const msg = [
+    "Camera Help:",
+    isHttps ? "✓ You are on HTTPS (good)." : "⚠ Use HTTPS (GitHub Pages/Netlify) for camera to work reliably.",
+    "1) Click the lock icon in the address bar → Site settings → Camera: Allow.",
+    "2) Reload the page.",
+    "3) If it still fails, choose a different camera or lower resolution, then Retry.",
+    "4) Close other apps using the camera (Zoom/Meet/Teams)."
+  ].join("\n");
+  alert(msg);
+});
+
+// Populate camera list on load (labels may appear after permission)
+populateCameraSelect();
+renderDashboard();
+</script>
+</body>
+</html>
